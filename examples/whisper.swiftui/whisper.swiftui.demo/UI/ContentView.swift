@@ -77,7 +77,7 @@ class WhisperTranslationManager: ObservableObject {
     
     private var textToSave = ""
     private var audioSession = AVAudioSession.sharedInstance()
-    private var translator: Translator?
+    private var translator: Translation.Translator? // Espacio de nombres explícito
     
     init() {
         setupAudioSession()
@@ -93,9 +93,10 @@ class WhisperTranslationManager: ObservableObject {
     }
     
     private func prepareTranslator() async {
-        let configuration = Translator.Configuration(sourceLanguage: .english, targetLanguage: .spanish)
         do {
-            self.translator = try await Translator(configuration: configuration)
+            // Forzamos la configuración explícita del SDK de traducción de iOS 18
+            let configuration = Translation.Translator.Configuration(sourceLanguage: .english, targetLanguage: .spanish)
+            self.translator = try await Translation.Translator(configuration: configuration)
         } catch {
             print("Error al inicializar el traductor nativo local: \(error)")
         }
