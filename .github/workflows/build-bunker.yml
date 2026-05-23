@@ -22,7 +22,7 @@ jobs:
         run: |
           cd examples/whisper.swiftui
           xcodebuild -project whisper.swiftui.xcodeproj \
-            -scheme whisper.swiftui \
+            -scheme WhisperCppDemo \
             -sdk iphoneos \
             -configuration Release \
             -derivedDataPath build \
@@ -35,7 +35,7 @@ jobs:
         run: |
           cd examples/whisper.swiftui
           mkdir -p build/Payload
-          cp -R build/Build/Products/Release-iphoneos/whisper.swiftui.app build/Payload/
+          cp -R build/Build/Products/Release-iphoneos/*.app build/Payload/
           cd build
           zip -r bunker_app_unsigned.ipa Payload
 
