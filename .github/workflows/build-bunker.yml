@@ -20,8 +20,17 @@ jobs:
 
       - name: Compilar Core C++ (XCFramework para Apple)
         run: |
-          chmod +x scripts/build-apple.sh
-          ./scripts/build-apple.sh
+          echo "Buscando dinámicamente el script de compilación para Apple..."
+          SCRIPT_PATH=$(find . -name "build-apple.sh" -o -name "build-xcframework.sh" -o -name "*apple*.sh" | head -n 1)
+          
+          if [ -n "$SCRIPT_PATH" ]; then
+            echo "¡Script detectado en: $SCRIPT_PATH!"
+            chmod +x "$SCRIPT_PATH"
+            "$SCRIPT_PATH"
+          else
+            echo "No se encontró un script con nombre estándar. Intentando compilar vía Makefile..."
+            make whisper.xcframework
+          fi
 
       - name: Compilar Aplicación (Modo Seguro sin Firma)
         run: |
