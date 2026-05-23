@@ -58,8 +58,8 @@ struct ContentView: View {
             }
             .padding(.top)
         }
-        // Sistema reactivo nativo de iOS 18 para traducción local segura en la Vista
-        .translationTask(id: manager.translationTrigger) { session in
+        // CORRECCIÓN: Quitamos la etiqueta 'id:' ya que el parámetro de Apple es anónimo
+        .translationTask(manager.translationTrigger) { session in
             guard !manager.textToTranslate.isEmpty else { return }
             do {
                 let response = try await session.translate(manager.textToTranslate)
@@ -188,7 +188,8 @@ struct ToggleRecordingIntent: AppIntent {
     
     @MainActor
     func perform() async throws -> some IntentResult {
-        await WhisperTranslationManager.shared.toggleRecording()
+        // CORRECCIÓN: Al estar en el mismo MainActor, llamamos a la función síncrona directamente sin 'await'
+        WhisperTranslationManager.shared.toggleRecording()
         return .result()
     }
 }
