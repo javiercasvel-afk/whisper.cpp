@@ -42,9 +42,6 @@ struct ContentView: View {
                     .padding()
                 }
                 
-                Divider()
-                    .background(Color.gray.opacity(0.15))
-                
                 // Zona 2: Visualización en Español (Texto principal en blanco)
                 ScrollView {
                     VStack(alignment: .leading) {
@@ -61,6 +58,16 @@ struct ContentView: View {
             }
             .padding(.top)
         }
+        // Sistema reactivo nativo de iOS 18 para traducción local segura en la Vista
+        .translationTask(id: manager.translationTrigger) { session in
+            guard !manager.textToTranslate.isEmpty else { return }
+            do {
+                let response = try await session.translate(manager.textToTranslate)
+                manager.appendTranslation(response.targetText)
+            } catch {
+                print("Error en traducción local: \(error)")
+            }
+        }
     }
 }
 
@@ -75,13 +82,15 @@ class WhisperTranslationManager: ObservableObject {
     @Published var englishText = ""
     @Published var spanishText = ""
     
+    // Propiedades puente para comunicarse con el modificador .translationTask
+    @Published var textToTranslate = ""
+    @Published var translationTrigger = 0
+    
     private var textToSave = ""
     private var audioSession = AVAudioSession.sharedInstance()
-    private var translator: Translation.Translator? // Espacio de nombres explícito
     
     init() {
         setupAudioSession()
-        Task { await prepareTranslator() }
     }
     
     private func setupAudioSession() {
@@ -89,16 +98,6 @@ class WhisperTranslationManager: ObservableObject {
             try audioSession.setCategory(.record, mode: .measurement, options: [.allowBluetooth])
         } catch {
             print("Error configurando el audio session: \(error)")
-        }
-    }
-    
-    private func prepareTranslator() async {
-        do {
-            // Forzamos la configuración explícita del SDK de traducción de iOS 18
-            let configuration = Translation.Translator.Configuration(sourceLanguage: .english, targetLanguage: .spanish)
-            self.translator = try await Translation.Translator(configuration: configuration)
-        } catch {
-            print("Error al inicializar el traductor nativo local: \(error)")
         }
     }
     
@@ -117,6 +116,8 @@ class WhisperTranslationManager: ObservableObject {
         
         englishText = ""
         spanishText = ""
+        textToTranslate = ""
+        translationTrigger = 0
         textToSave = "--- Reunión del \(Date().formatted()) ---\n\n"
         
         print("Grabación e IA local iniciadas de forma silenciosa.")
@@ -144,18 +145,16 @@ class WhisperTranslationManager: ObservableObject {
             self.englishText += " " + text
             self.textToSave += "[EN]: \(text)\n"
             
-            Task {
-                if let translator = self.translator {
-                    do {
-                        let response = try await translator.translate(text)
-                        self.spanishText += " " + response.targetText
-                        self.textToSave += "[ES]: \(response.targetText)\n\n"
-                    } catch {
-                        print("Error en traducción local: \(error)")
-                    }
-                }
-            }
+            // Pasamos el fragmento a la vista y aumentamos el contador para disparar el translationTask
+            self.textToTranslate = text
+            self.translationTrigger += 1
         }
+    }
+    
+    func appendTranslation(_ translatedText: String) {
+        guard isRecording else { return }
+        self.spanishText += " " + translatedText
+        self.textToSave += "[ES (Traducido)]: \(translatedText)\n\n"
     }
     
     private func saveFinalTranscript() {
@@ -181,15 +180,15 @@ class WhisperTranslationManager: ObservableObject {
 }
 
 // ==========================================
-// 3. ENLACE CON EL BOTÓN DE ACCIÓN FISICO
+// 3. ENLACE CON EL BOTÓN DE ACCIÓN FÍSICO
 // ==========================================
 struct ToggleRecordingIntent: AppIntent {
-    static var title: LocalizedStringResource = "Alternar Grabación Búnker"
-    static var openAppWhenRun: Bool = false
+    static let title: LocalizedStringResource = "Alternar Grabación Búnker"
+    static let openAppWhenRun: Bool = false
     
     @MainActor
     func perform() async throws -> some IntentResult {
-        WhisperTranslationManager.shared.toggleRecording()
+        await WhisperTranslationManager.shared.toggleRecording()
         return .result()
     }
 }
