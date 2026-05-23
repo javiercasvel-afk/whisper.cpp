@@ -2,16 +2,16 @@ name: Build iOS App Bunker
 on:
   push:
     branches: [ master, main ]
-  workflow_dispatch: # Permite activar la compilación manualmente cuando quieras
+  workflow_dispatch:
 
 jobs:
   build:
-    runs-on: macos-14 # Servidor Mac con Apple Silicon
+    runs-on: macos-14
     steps:
       - name: Checkout del código
         uses: actions/checkout@v4
         with:
-          submodules: 'recursive' # Descarga los componentes C++ esenciales de Whisper
+          submodules: 'recursive'
 
       - name: Configurar versión de Xcode
         uses: maxim-lobanov/setup-xcode@v1
@@ -44,7 +44,6 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
             IPHONEOS_DEPLOYMENT_TARGET=18.0 \
-            SWIFT_VERSION=6.0 \
             clean build
 
       - name: Empaquetar en archivo .IPA (Instalador de iOS)
