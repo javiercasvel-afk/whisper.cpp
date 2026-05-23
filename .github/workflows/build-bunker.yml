@@ -18,6 +18,11 @@ jobs:
         with:
           xcode-version: '15.4'
 
+      - name: Compilar Core C++ (XCFramework para Apple)
+        run: |
+          chmod +x scripts/build-apple.sh
+          ./scripts/build-apple.sh
+
       - name: Compilar Aplicación (Modo Seguro sin Firma)
         run: |
           cd examples/whisper.swiftui
