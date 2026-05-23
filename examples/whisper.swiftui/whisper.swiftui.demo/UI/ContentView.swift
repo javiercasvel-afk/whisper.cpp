@@ -58,8 +58,8 @@ struct ContentView: View {
             }
             .padding(.top)
         }
-        // SOLUCIÓN: Usamos 'id:' correctamente y añadimos 'await' a los accesos del MainActor dentro del bloque
-        .translationTask(id: manager.translationTrigger) { session in
+        // SOLUCIÓN: Pasamos el objeto Configuration nativo de Apple
+        .translationTask(manager.translationConfiguration) { session in
             let textoATraducir = await manager.textToTranslate
             guard !textoATraducir.isEmpty else { return }
             
@@ -86,7 +86,7 @@ class WhisperTranslationManager: ObservableObject {
     
     // Propiedades puente para comunicarse con el modificador .translationTask
     @Published var textToTranslate = ""
-    @Published var translationTrigger = 0
+    @Published var translationConfiguration: TranslationSession.Configuration? // TIPO CORRECTO iOS 18
     
     private var textToSave = ""
     private var audioSession = AVAudioSession.sharedInstance()
@@ -119,7 +119,7 @@ class WhisperTranslationManager: ObservableObject {
         englishText = ""
         spanishText = ""
         textToTranslate = ""
-        translationTrigger = 0
+        translationConfiguration = nil
         textToSave = "--- Reunión del \(Date().formatted()) ---\n\n"
         
         print("Grabación e IA local iniciadas de forma silenciosa.")
@@ -147,9 +147,15 @@ class WhisperTranslationManager: ObservableObject {
             self.englishText += " " + text
             self.textToSave += "[EN]: \(text)\n"
             
-            // Pasamos el fragmento a la vista y aumentamos el contador para disparar el translationTask
+            // Pasamos el texto y configuramos la tarea de traducción
             self.textToTranslate = text
-            self.translationTrigger += 1
+            
+            if self.translationConfiguration == nil {
+                self.translationConfiguration = TranslationSession.Configuration()
+            } else {
+                // Invalida la sesión actual para forzar a la tarea a ejecutarse de nuevo
+                self.translationConfiguration?.invalidate()
+            }
         }
     }
     
