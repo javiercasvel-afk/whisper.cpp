@@ -1,0 +1,47 @@
+name: Build iOS App Bunker
+on:
+  push:
+    branches: [ master, main ]
+  workflow_dispatch: # Permite activar la compilación manualmente cuando quieras
+
+jobs:
+  build:
+    runs-on: macos-14 # Iniciamos un servidor Mac virtual con Apple Silicon
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive' # Descarga los componentes C++ esenciales de Whisper
+
+      - name: Configurar versión de Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '15.4'
+
+      - name: Compilar Aplicación (Modo Seguro sin Firma)
+        run: |
+          cd examples/whisper.swiftui
+          xcodebuild -project whisper.swiftui.xcodeproj \
+            -scheme whisper.swiftui \
+            -sdk iphoneos \
+            -configuration Release \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            clean build
+
+      - name: Empaquetar en archivo .IPA (Instalador de iOS)
+        run: |
+          cd examples/whisper.swiftui
+          mkdir -p build/Payload
+          cp -R build/Build/Products/Release-iphoneos/whisper.swiftui.app build/Payload/
+          cd build
+          zip -r bunker_app_unsigned.ipa Payload
+
+      - name: Guardar instalador final
+        uses: actions/upload-artifact@v4
+        with:
+          name: App-Bunker-Instalable
+          path: examples/whisper.swiftui/build/bunker_app_unsigned.ipa
+          retention-days: 5
