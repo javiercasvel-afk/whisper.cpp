@@ -58,12 +58,14 @@ struct ContentView: View {
             }
             .padding(.top)
         }
-        // CORRECCIÓN: Quitamos la etiqueta 'id:' ya que el parámetro de Apple es anónimo
-        .translationTask(manager.translationTrigger) { session in
-            guard !manager.textToTranslate.isEmpty else { return }
+        // SOLUCIÓN: Usamos 'id:' correctamente y añadimos 'await' a los accesos del MainActor dentro del bloque
+        .translationTask(id: manager.translationTrigger) { session in
+            let textoATraducir = await manager.textToTranslate
+            guard !textoATraducir.isEmpty else { return }
+            
             do {
-                let response = try await session.translate(manager.textToTranslate)
-                manager.appendTranslation(response.targetText)
+                let response = try await session.translate(textoATraducir)
+                await manager.appendTranslation(response.targetText)
             } catch {
                 print("Error en traducción local: \(error)")
             }
@@ -188,7 +190,6 @@ struct ToggleRecordingIntent: AppIntent {
     
     @MainActor
     func perform() async throws -> some IntentResult {
-        // CORRECCIÓN: Al estar en el mismo MainActor, llamamos a la función síncrona directamente sin 'await'
         WhisperTranslationManager.shared.toggleRecording()
         return .result()
     }
